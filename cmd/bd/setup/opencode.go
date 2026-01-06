@@ -46,12 +46,62 @@ func defaultOpencodeEnv() (opencodeEnv, error) {
 	}, nil
 }
 
-func projectOpencodeConfigPath(base string) string {
-	return filepath.Join(base, ".opencode", "opencode.json")
+// opencodeConfigNames lists config file names in priority order for reading.
+// OpenCode reads config.json, opencode.json, opencode.jsonc (later files override earlier).
+// For writing, we prefer opencode.json as it's the canonical name.
+var opencodeConfigNames = []string{"config.json", "opencode.json", "opencode.jsonc"}
+
+// projectOpencodeConfigPaths returns all possible project config paths in priority order.
+// Includes both root-level and .opencode/ subdirectory locations.
+func projectOpencodeConfigPaths(base string) []string {
+	var paths []string
+	// Check .opencode/ subdirectory first (more specific)
+	for _, name := range opencodeConfigNames {
+		paths = append(paths, filepath.Join(base, ".opencode", name))
+	}
+	// Then check root level
+	for _, name := range opencodeConfigNames {
+		paths = append(paths, filepath.Join(base, name))
+	}
+	return paths
 }
 
-func globalOpencodeConfigPath(home string) string {
-	return filepath.Join(home, ".config", "opencode", "opencode.json")
+// globalOpencodeConfigPaths returns all possible global config paths in priority order.
+func globalOpencodeConfigPaths(home string) []string {
+	configDir := filepath.Join(home, ".config", "opencode")
+	var paths []string
+	for _, name := range opencodeConfigNames {
+		paths = append(paths, filepath.Join(configDir, name))
+	}
+	return paths
+}
+
+// findExistingOpencodeConfig finds the first existing config file from the given paths.
+// Returns empty string if none exist.
+func findExistingOpencodeConfig(readFile func(string) ([]byte, error), paths []string) string {
+	for _, p := range paths {
+		if _, err := readFile(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
+
+// preferredOpencodeConfigPath returns the preferred path for writing a new config.
+// For project configs, prefers .opencode/opencode.json.
+// For global configs, prefers ~/.config/opencode/opencode.json.
+func preferredOpencodeConfigPath(paths []string) string {
+	// Find opencode.json in the list (preferred for writing)
+	for _, p := range paths {
+		if filepath.Base(p) == "opencode.json" {
+			return p
+		}
+	}
+	// Fallback to first path
+	if len(paths) > 0 {
+		return paths[0]
+	}
+	return ""
 }
 
 // InstallOpencode installs OpenCode hooks
@@ -68,13 +118,19 @@ func InstallOpencode(project bool, stealth bool) {
 }
 
 func installOpencode(env opencodeEnv, project bool, stealth bool) error {
-	var configPath string
+	var configPaths []string
 	if project {
-		configPath = projectOpencodeConfigPath(env.projectDir)
+		configPaths = projectOpencodeConfigPaths(env.projectDir)
 		_, _ = fmt.Fprintln(env.stdout, "Installing OpenCode hooks for this project...")
 	} else {
-		configPath = globalOpencodeConfigPath(env.homeDir)
+		configPaths = globalOpencodeConfigPaths(env.homeDir)
 		_, _ = fmt.Fprintln(env.stdout, "Installing OpenCode hooks globally...")
+	}
+
+	// Find existing config or use preferred path for new installs
+	configPath := findExistingOpencodeConfig(env.readFile, configPaths)
+	if configPath == "" {
+		configPath = preferredOpencodeConfigPath(configPaths)
 	}
 
 	if err := env.ensureDir(filepath.Dir(configPath), 0o755); err != nil {
@@ -85,7 +141,7 @@ func installOpencode(env opencodeEnv, project bool, stealth bool) error {
 	config := make(map[string]interface{})
 	if data, err := env.readFile(configPath); err == nil {
 		if err := json.Unmarshal(data, &config); err != nil {
-			_, _ = fmt.Fprintf(env.stderr, "Error: failed to parse opencode.json: %v\n", err)
+			_, _ = fmt.Fprintf(env.stderr, "Error: failed to parse %s: %v\n", filepath.Base(configPath), err)
 			return err
 		}
 	}
@@ -145,21 +201,28 @@ func CheckOpencode() {
 }
 
 func checkOpencode(env opencodeEnv) error {
-	globalConfig := globalOpencodeConfigPath(env.homeDir)
-	projectConfig := projectOpencodeConfigPath(env.projectDir)
+	globalPaths := globalOpencodeConfigPaths(env.homeDir)
+	projectPaths := projectOpencodeConfigPaths(env.projectDir)
 
-	switch {
-	case hasOpencodeBeadsHooks(globalConfig):
-		_, _ = fmt.Fprintf(env.stdout, "✓ Global hooks installed: %s\n", globalConfig)
-		return nil
-	case hasOpencodeBeadsHooks(projectConfig):
-		_, _ = fmt.Fprintf(env.stdout, "✓ Project hooks installed: %s\n", projectConfig)
-		return nil
-	default:
-		_, _ = fmt.Fprintln(env.stdout, "✗ No hooks installed")
-		_, _ = fmt.Fprintln(env.stdout, "  Run: bd setup opencode")
-		return errOpencodeHooksMissing
+	// Check global configs
+	for _, configPath := range globalPaths {
+		if hasOpencodeBeadsHooks(configPath) {
+			_, _ = fmt.Fprintf(env.stdout, "✓ Global hooks installed: %s\n", configPath)
+			return nil
+		}
 	}
+
+	// Check project configs
+	for _, configPath := range projectPaths {
+		if hasOpencodeBeadsHooks(configPath) {
+			_, _ = fmt.Fprintf(env.stdout, "✓ Project hooks installed: %s\n", configPath)
+			return nil
+		}
+	}
+
+	_, _ = fmt.Fprintln(env.stdout, "✗ No hooks installed")
+	_, _ = fmt.Fprintln(env.stdout, "  Run: bd setup opencode")
+	return errOpencodeHooksMissing
 }
 
 // RemoveOpencode removes OpenCode hooks
@@ -176,13 +239,20 @@ func RemoveOpencode(project bool) {
 }
 
 func removeOpencode(env opencodeEnv, project bool) error {
-	var configPath string
+	var configPaths []string
 	if project {
-		configPath = projectOpencodeConfigPath(env.projectDir)
+		configPaths = projectOpencodeConfigPaths(env.projectDir)
 		_, _ = fmt.Fprintln(env.stdout, "Removing OpenCode hooks from project...")
 	} else {
-		configPath = globalOpencodeConfigPath(env.homeDir)
+		configPaths = globalOpencodeConfigPaths(env.homeDir)
 		_, _ = fmt.Fprintln(env.stdout, "Removing OpenCode hooks globally...")
+	}
+
+	// Find existing config file
+	configPath := findExistingOpencodeConfig(env.readFile, configPaths)
+	if configPath == "" {
+		_, _ = fmt.Fprintln(env.stdout, "No config file found")
+		return nil
 	}
 
 	data, err := env.readFile(configPath)
@@ -193,7 +263,7 @@ func removeOpencode(env opencodeEnv, project bool) error {
 
 	var config map[string]interface{}
 	if err := json.Unmarshal(data, &config); err != nil {
-		_, _ = fmt.Fprintf(env.stderr, "Error: failed to parse opencode.json: %v\n", err)
+		_, _ = fmt.Fprintf(env.stderr, "Error: failed to parse %s: %v\n", filepath.Base(configPath), err)
 		return err
 	}
 

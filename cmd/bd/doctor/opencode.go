@@ -57,14 +57,29 @@ func hasOpencodeHooksGlobal() bool {
 		return false
 	}
 
-	globalConfig := filepath.Join(home, ".config", "opencode", "opencode.json")
-	return hasOpencodeHooks(globalConfig)
+	// Check all possible config file variants
+	configDir := filepath.Join(home, ".config", "opencode")
+	variants := []string{"config.json", "opencode.json", "opencode.jsonc"}
+
+	for _, variant := range variants {
+		if hasOpencodeHooks(filepath.Join(configDir, variant)) {
+			return true
+		}
+	}
+	return false
 }
 
 // hasOpencodeHooksProject checks if bd prime hooks exist in project OpenCode config
 func hasOpencodeHooksProject() bool {
-	projectConfig := ".opencode/opencode.json"
-	return hasOpencodeHooks(projectConfig)
+	// Check all possible config file variants
+	variants := []string{".opencode/config.json", ".opencode/opencode.json", ".opencode/opencode.jsonc"}
+
+	for _, variant := range variants {
+		if hasOpencodeHooks(variant) {
+			return true
+		}
+	}
+	return false
 }
 
 // hasOpencodeHooks checks if a config file has bd prime hooks in session_start and pre_compact

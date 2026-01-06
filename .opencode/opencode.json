@@ -1,8 +1,6 @@
 {
   "experimental": {
-    "hook": {
-      "pre_compact": null,
-      "session_start": null
-    }
-  }
+    "hook": {}
+  },
+  "$schema": "https://opencode.ai/config.json"
 }

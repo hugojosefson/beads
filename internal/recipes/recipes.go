@@ -80,7 +80,7 @@ var BuiltinRecipes = map[string]Recipe{
 	},
 	"opencode": {
 		Name:        "OpenCode",
-		GlobalPath:  "~/.config/opencode/opencode.json",
+		GlobalPath:  "~/.config/opencode/config.json",
 		ProjectPath: ".opencode/opencode.json",
 		Type:        TypeHooks,
 		Description: "OpenCode hooks for bd prime integration",
