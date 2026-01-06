@@ -1,0 +1,8 @@
+{
+  "experimental": {
+    "hook": {
+      "pre_compact": null,
+      "session_start": null
+    }
+  }
+}

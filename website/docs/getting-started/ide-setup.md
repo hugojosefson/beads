@@ -45,6 +45,29 @@ If you prefer manual configuration, add to your Claude Code hooks:
 }
 ```
 
+## OpenCode
+
+[OpenCode](https://opencode.ai) is an AI coding assistant that runs in your terminal.
+
+### Quick setup
+
+```bash
+bd setup opencode
+```
+
+This registers hooks in your OpenCode configuration that automatically run `bd prime` when sessions start and before context compaction.
+
+### Options
+
+| Flag | Effect |
+|:-----|:-------|
+| `--project` | Install for current project only (`.opencode/opencode.json`) |
+| `--stealth` | Use stealth mode for `bd prime` |
+| `--check` | Verify installation status |
+| `--remove` | Uninstall hooks |
+
+See [OpenCode Integration](/docs/integrations/opencode) for detailed documentation.
+
 ## Cursor IDE
 
 ```bash

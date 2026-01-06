@@ -526,6 +526,11 @@ func runDiagnostics(path string) doctorResult {
 	result.Checks = append(result.Checks, claudeHookCheck)
 	// Don't fail overall check for incomplete hooks, just warn
 
+	// Check 11b: OpenCode integration
+	opencodeCheck := convertWithCategory(doctor.CheckOpencode(), doctor.CategoryIntegration)
+	result.Checks = append(result.Checks, opencodeCheck)
+	// Don't fail overall check for missing OpenCode integration, just warn
+
 	// Check 11c: bd prime output verification
 	bdPrimeOutputCheck := convertWithCategory(doctor.VerifyPrimeOutput(), doctor.CategoryIntegration)
 	result.Checks = append(result.Checks, bdPrimeOutputCheck)

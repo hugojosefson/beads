@@ -78,6 +78,13 @@ var BuiltinRecipes = map[string]Recipe{
 		GlobalPath:  "~/.gemini/settings.json",
 		ProjectPath: ".gemini/settings.json",
 	},
+	"opencode": {
+		Name:        "OpenCode",
+		GlobalPath:  "~/.config/opencode/opencode.json",
+		ProjectPath: ".opencode/opencode.json",
+		Type:        TypeHooks,
+		Description: "OpenCode hooks for bd prime integration",
+	},
 	"factory": {
 		Name:        "Factory.ai (Droid)",
 		Path:        "AGENTS.md",

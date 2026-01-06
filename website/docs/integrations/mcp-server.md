@@ -1,7 +1,7 @@
 ---
 id: mcp-server
 title: MCP Server
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # MCP Server

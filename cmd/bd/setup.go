@@ -180,6 +180,9 @@ func runRecipe(name string) {
 	case "junie":
 		runJunieRecipe()
 		return
+	case "opencode":
+		runOpencodeRecipe()
+		return
 	}
 
 	// For all other recipes (built-in or user), use generic file-based install
@@ -332,6 +335,18 @@ func runJunieRecipe() {
 		return
 	}
 	setup.InstallJunie()
+}
+
+func runOpencodeRecipe() {
+	if setupCheck {
+		setup.CheckOpencode()
+		return
+	}
+	if setupRemove {
+		setup.RemoveOpencode(setupProject)
+		return
+	}
+	setup.InstallOpencode(setupProject, setupStealth)
 }
 
 func findBeadsDir() string {
